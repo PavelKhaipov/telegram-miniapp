@@ -4,11 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App - Камера</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #000; /* Фон при черном экране */
+            color: white;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid white;
+            background: black;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <video id="video" autoplay></video>
-    <button id="capture">Сделать фото</button>
+    <video id="video" autoplay playsinline></video>
+    <button id="capture">📷 Сделать фото</button>
     <canvas id="canvas" style="display:none;"></canvas>
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const video = document.getElementById('video');
@@ -16,30 +40,44 @@
         const captureButton = document.getElementById('capture');
         const ctx = canvas.getContext('2d');
 
-        // Запрашиваем камеру
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
-            })
-            .catch(err => console.error("Ошибка доступа к камере:", err));
+                
+                // Ждем, пока камера загрузится
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+            } catch (err) {
+                console.error("Ошибка доступа к камере:", err);
+                alert("Ошибка: не удалось получить доступ к камере.");
+            }
+        }
 
-        // Обработчик кнопки "Сделать фото"
-        captureButton.addEventListener('click', () => {
+        captureButton.addEventListener('click', async () => {
+            if (!video.videoWidth || !video.videoHeight) {
+                alert("Камера не загружена. Попробуйте еще раз.");
+                return;
+            }
+
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Задержка, чтобы избежать черного кадра
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             // Конвертируем фото в base64
             const photoData = canvas.toDataURL('image/jpeg');
 
             // Отправляем фото в бота
             Telegram.WebApp.sendData(photoData);
-        });
 
-        // Автоматически закрываем Mini App после отправки
-        Telegram.WebApp.onEvent('sendData', () => {
+            // Закрываем Mini App
             Telegram.WebApp.close();
         });
+
+        // Запускаем камеру при загрузке
+        startCamera();
     </script>
 </body>
 </html>
