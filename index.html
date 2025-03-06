@@ -11,7 +11,7 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background-color: #000; /* Фон при черном экране */
+            background-color: #000;
             color: white;
         }
         video {
@@ -40,43 +40,52 @@
         const captureButton = document.getElementById('capture');
         const ctx = canvas.getContext('2d');
 
+        // Функция для начала работы с камерой
         async function startCamera() {
             try {
+                // Получаем поток с камеры
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
                 
-                // Ждем, пока камера загрузится
+                // Ожидаем, пока метаданные видео загружены
                 await new Promise(resolve => video.onloadedmetadata = resolve);
+
+                console.log("Камера успешно подключена.");
             } catch (err) {
                 console.error("Ошибка доступа к камере:", err);
                 alert("Ошибка: не удалось получить доступ к камере.");
             }
         }
 
+        // Обработчик нажатия кнопки "Сделать фото"
         captureButton.addEventListener('click', async () => {
+            // Проверяем, что видео действительно загружено
             if (!video.videoWidth || !video.videoHeight) {
                 alert("Камера не загружена. Попробуйте еще раз.");
                 return;
             }
 
+            // Устанавливаем размер канваса по размеру видео
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+
+            // Рисуем кадр с видео на канвас
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Задержка, чтобы избежать черного кадра
+            // Добавляем небольшую задержку, чтобы избежать черного кадра
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            // Конвертируем фото в base64
+            // Конвертируем фото в формат base64
             const photoData = canvas.toDataURL('image/jpeg');
 
             // Отправляем фото в бота
             Telegram.WebApp.sendData(photoData);
 
-            // Закрываем Mini App
+            // Закрываем мини-приложение
             Telegram.WebApp.close();
         });
 
-        // Запускаем камеру при загрузке
+        // Запуск камеры при загрузке страницы
         startCamera();
     </script>
 </body>
